@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0A0A0A" />
+<title>The Tribunal</title>
+<style>
+  /*
+    Black and white, with royal purple and teal as tertiary accents only —
+    dividers, line breaks, light borders. Never button fills or body text.
+
+    The backdrop is painted by a fixed body::before layer rather than relying
+    on html/body background alone: some embedding hosts override those, which
+    strands light text on a light page.
+  */
+  :root {
+    color-scheme: dark;
+    --ink: #0a0a0a;
+    --paper: #ffffff;
+    --paper-text: #101012;
+    --ground: #17171a;
+    --raise: #232327;
+    --text: #f4f4f6;
+    --dim: #b9b9c2;
+    --line: #33333a;
+    --violet: #9b6dff;
+    --teal: #2fd9c8;
+    --pad: 20px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--ink);
+    color: var(--text);
+    font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Guaranteed dark backdrop, immune to host background overrides. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: var(--ink);
+    z-index: -1;
+  }
+
+  body {
+    position: relative;
+    padding: max(18px, env(safe-area-inset-top)) var(--pad)
+             calc(96px + env(safe-area-inset-bottom));
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  h1, h2 { margin: 0; font-weight: 800; letter-spacing: -0.02em; }
+
+  .brand {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    color: var(--text);
+    padding-bottom: 14px;
+    border-bottom: 2px solid;
+    border-image: linear-gradient(90deg, var(--violet), var(--teal)) 1;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .brand span { color: var(--dim); font-weight: 600; letter-spacing: .06em; font-size: 13px; }
+
+  .charge {
+    font-size: clamp(26px, 6.8vw, 36px);
+    line-height: 1.14;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  /* a played card gets a teal underline; a person's name, a violet one */
+  .slot { border-bottom: 2px solid var(--teal); padding-bottom: 1px; }
+  .slot.empty { color: var(--dim); border-bottom: 2px dashed var(--violet); }
+  .person { color: var(--violet); border-bottom: 2px solid var(--violet); padding-bottom: 1px; }
+
+  .meta { color: var(--dim); font-size: 14px; margin: 0 0 24px; }
+
+  /* --- tappable rows -------------------------------------------------- */
+  .row {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--ground);
+    color: var(--text);
+    border: 0;
+    border-left: 4px solid var(--line);
+    border-radius: 0 8px 8px 0;
+    padding: 17px 16px;
+    margin-bottom: 9px;
+    font: inherit;
+    font-weight: 600;
+    min-height: 58px;
+    cursor: pointer;
+    transition: border-color .12s, background .12s;
+  }
+  .row:active { background: var(--raise); }
+  .row[aria-pressed="true"] { border-left-color: var(--violet); background: var(--raise); }
+  .row:disabled { opacity: .45; cursor: default; }
+  .row .sub { display: block; font-weight: 500; font-size: 13px; color: var(--dim); margin-top: 3px; }
+
+  /* --- cards in hand, deliberately paper-like ------------------------- */
+  .card {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--paper);
+    color: var(--paper-text);
+    border: 1px solid transparent;
+    border-radius: 9px;
+    padding: 15px 16px;
+    margin-bottom: 8px;
+    font: inherit;
+    font-weight: 650;
+    line-height: 1.3;
+    min-height: 56px;
+    cursor: pointer;
+    position: relative;
+    transition: transform .1s, border-color .12s;
+  }
+  .card[aria-pressed="true"] { border-color: var(--violet); transform: translateX(10px); }
+  .card .ord {
+    position: absolute; top: 8px; right: 8px;
+    width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--violet); border-radius: 50%;
+    font-size: 11px; font-weight: 800; color: var(--paper-text);
+  }
+
+  :focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+
+  /* --- primary action, pinned ----------------------------------------- */
+  .dock {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding: 12px var(--pad) calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--ink) 68%, transparent);
+  }
+  .dock-inner { max-width: 620px; margin: 0 auto; display: flex; gap: 9px; }
+
+  .go {
+    flex: 1;
+    background: var(--paper);
+    color: var(--paper-text);
+    border: 0; border-radius: 9px;
+    padding: 18px;
+    font: inherit; font-weight: 800;
+    min-height: 58px; cursor: pointer;
+  }
+  .go:disabled { background: var(--raise); color: var(--dim); cursor: default; }
+  .go.ghost { flex: 0 0 auto; background: var(--ground); color: var(--text); border: 2px solid var(--violet); padding: 18px 14px; }
+
+  input[type=text] {
+    width: 100%;
+    background: var(--ground); color: var(--text);
+    border: 2px solid var(--line); border-radius: 9px;
+    padding: 16px; font: inherit; margin-bottom: 10px;
+  }
+  input[type=text]:focus { border-color: var(--violet); outline: none; }
+  input::placeholder { color: var(--dim); }
+
+  .note { color: var(--dim); font-size: 14px; }
+  .err { color: var(--violet); font-size: 14px; min-height: 20px; margin-top: 8px; font-weight: 700; }
+
+  /* --- verdict --------------------------------------------------------- */
+  .verdict {
+    background: var(--paper); color: var(--paper-text);
+    border-radius: 10px; padding: 22px; margin-bottom: 14px;
+    border-top: 4px solid;
+    border-image: linear-gradient(90deg, var(--violet), var(--teal)) 1;
+    animation: land .32s cubic-bezier(.2,.9,.3,1.2);
+  }
+  .verdict h2 { font-size: 29px; line-height: 1.08; }
+  .verdict p { margin: 6px 0 0; font-weight: 600; font-size: 15px; opacity: .7; }
+  @keyframes land { from { transform: scale(.94); opacity: 0 } to { transform: none; opacity: 1 } }
+  @media (prefers-reduced-motion: reduce) { .verdict { animation: none } }
+
+  .clash {
+    border: 2px solid var(--violet); border-radius: 10px;
+    background: var(--ground);
+    padding: 15px 17px; margin-bottom: 22px; color: var(--text);
+  }
+  .clash b { color: var(--violet); }
+
+  /* Results rows sit on their own dark plate so they stay legible even if
+     something upstream tries to impose a light background. */
+  .tally {
+    background: var(--ground);
+    border-top: 2px solid var(--teal);
+    border-radius: 0 0 6px 6px;
+    padding: 14px 15px;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .tally .count { float: right; color: var(--text); font-weight: 800; font-size: 18px; margin-left: 10px; }
+  .tally .line { font-weight: 600; }
+  .tally .who { display: block; color: var(--dim); font-size: 13px; margin-top: 5px; }
+  .tally.dupe { border-top-color: var(--violet); }
+
+  .score { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+  .chip {
+    background: var(--ground); border: 1px solid var(--teal);
+    border-radius: 99px; padding: 7px 13px; font-size: 14px; font-weight: 600;
+    color: var(--text);
+  }
+  .chip.off { opacity: .45; border-color: var(--line); }
+  .chip em { font-style: normal; color: var(--text); font-weight: 800; }
+  .hide { display: none; }
+
+  /* --- lobby roster ---------------------------------------------------- */
+  .roster { margin: 4px 0 0; }
+  .who-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--ground);
+    border-left: 3px solid var(--teal);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 16px; margin-bottom: 8px;
+    font-weight: 700;
+    animation: slidein .22s ease-out;
+  }
+  .who-row.me { border-left-color: var(--violet); }
+  .who-row .tag {
+    margin-left: auto; font-size: 12px; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--dim);
+  }
+  .who-row.me .tag { color: var(--violet); }
+  @keyframes slidein { from { opacity: 0; transform: translateY(-4px) } to { opacity: 1; transform: none } }
+  @media (prefers-reduced-motion: reduce) { .who-row { animation: none } }
+
+  .empty-seat {
+    border: 2px dashed var(--line); border-radius: 8px;
+    padding: 14px 16px; margin-bottom: 8px;
+    color: var(--dim); font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="brand">THE TRIBUNAL <span id="crumb"></span></div>
+<main id="app"></main>
+<div class="dock hide" id="dock"><div class="dock-inner" id="dockInner"></div></div>
+
+<script>
+const app = document.getElementById("app");
+const dock = document.getElementById("dock");
+const dockInner = document.getElementById("dockInner");
+const crumb = document.getElementById("crumb");
+
+let pid = localStorage.getItem("tribunal-pid");
+let state = null;
+let draft = null;       // pending pick / vote selection
+let picked = [];        // cards chosen from hand, in play order
+let stream = null;
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+const partsHtml = parts => parts
+  .map(p => p.card ? `<span class="slot">${esc(p.t)}</span>` : esc(p.t))
+  .join("");
+
+async function post(path, body) {
+  const r = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  return { ok: r.ok, data: await r.json().catch(() => ({})) };
+}
+
+const act = (type, payload) => post("/api/action", { pid, type, payload });
+
+function connect() {
+  if (stream) stream.close();
+  stream = new EventSource("/api/events?pid=" + encodeURIComponent(pid));
+  stream.onmessage = e => { state = JSON.parse(e.data); render(); };
+}
+
+// ------------------------------------------------------------------ screens
+
+function renderJoin(msg) {
+  crumb.textContent = "";
+  dock.classList.add("hide");
+  app.innerHTML = `
+    <h1 class="charge">Everyone judges everyone. Someone drinks.</h1>
+    <p class="meta">Pick a name people will recognise when it turns up in a verdict.</p>
+    <input type="text" id="nameIn" placeholder="Your name" maxlength="18" autocomplete="off" />
+    <button class="go" id="joinBtn" style="width:100%">Take a seat</button>
+    <p class="err">${msg ? esc(msg) : ""}</p>`;
+
+  const input = document.getElementById("nameIn");
+  const go = async () => {
+    const { ok, data } = await post("/api/join", { name: input.value });
+    if (!ok) return renderJoin(data.error || "Could not join.");
+    pid = data.pid;
+    localStorage.setItem("tribunal-pid", pid);
+    connect();
+  };
+  document.getElementById("joinBtn").onclick = go;
+  input.onkeydown = e => { if (e.key === "Enter") go(); };
+  input.focus();
+}
+
+function setDock(buttons) {
+  if (!buttons.length) return dock.classList.add("hide");
+  dock.classList.remove("hide");
+  dockInner.innerHTML = buttons
+    .map((b, i) => `<button class="go ${b.ghost ? "ghost" : ""}" data-i="${i}" ${b.disabled ? "disabled" : ""}>${esc(b.label)}</button>`)
+    .join("");
+  [...dockInner.children].forEach((el, i) => (el.onclick = buttons[i].onClick));
+}
+
+const scoreboard = () => `<div class="score">${state.players.map(p =>
+  `<span class="chip ${p.online ? "" : "off"}">${esc(p.name)}${p.isHost ? " ·" : ""} <em>${p.drinks}</em></span>`
+).join("")}</div>`;
+
+function renderLobby() {
+  const you = state.you;
+  const online = state.players.filter(p => p.online);
+  const live = online.length;
+  const hostName = state.players.find(p => p.isHost)?.name || "The host";
+  crumb.textContent = you.isHost ? "you are host" : "waiting for host";
+
+  app.innerHTML = `
+    <h1 class="charge">${live === 1 ? "Just you so far" : live + " in the room"}</h1>
+    <p class="meta">${you.isHost
+      ? "Names appear here as people join. Start when you can see everyone."
+      : esc(hostName) + " starts it once everyone is in."}</p>
+    <div class="roster">
+      ${online.map(p => {
+        const tags = [];
+        if (p.id === you.id) tags.push("you");
+        if (p.isHost) tags.push("host");
+        return `<div class="who-row ${p.id === you.id ? "me" : ""}">
+          <span>${esc(p.name)}</span>
+          <span class="tag">${tags.join(" · ")}</span>
+        </div>`;
+      }).join("")}
+      ${live < 2 ? `<div class="empty-seat">Waiting for someone else to join…</div>` : ""}
+    </div>`;
+
+  setDock(you.isHost
+    ? [{ label: live < 2 ? "Need one more" : "Everyone's in — begin",
+         disabled: live < 2,
+         onClick: () => act("start") }]
+    : []);
+}
+
+// Prompt with the cards you've chosen slotted into the blanks.
+function previewHtml(text, cards) {
+  let out = "", rest = text, i = 0, m;
+  while ((m = rest.match(/_{2,}/))) {
+    out += esc(rest.slice(0, m.index));
+    out += cards[i]
+      ? `<span class="slot">${esc(cards[i])}</span>`
+      : `<span class="slot empty">${esc(m[0])}</span>`;
+    i++;
+    rest = rest.slice(m.index + m[0].length);
+  }
+  return out + esc(rest);
+}
+
+function renderAnswer() {
+  const { prompt, you, waitingOn } = state;
+  crumb.textContent = "round " + state.roundNum;
+
+  if (you.submitted) {
+    app.innerHTML = `
+      <h1 class="charge">${partsHtml(prompt.parts)}</h1>
+      <p class="meta">You played <strong>${esc(state.yourAnswer || "")}</strong>. No takebacks.</p>
+      <p class="note">Still deciding: ${esc(waitingOn.join(", ")) || "nobody"}</p>`;
+    return setDock(you.isHost && waitingOn.length
+      ? [{ label: "Close it early", onClick: () => act("skip") }] : []);
+  }
+
+  // --- a prompt with blanks, played from your hand
+  if (prompt.type === "hand" || prompt.play === "hand") {
+    const need = prompt.blanks || 1;
+    app.innerHTML = `
+      <h1 class="charge">${previewHtml(prompt.parts, picked)}</h1>
+      <p class="meta">${need > 1 ? `Play two cards, in order.` : `Play one card.`}
+        Matching somebody else costs you a drink.</p>
+      ${you.hand.map(c => {
+        const at = picked.indexOf(c);
+        return `<button class="card" data-card="${esc(c)}" aria-pressed="${at >= 0}">${esc(c)}${
+          at >= 0 && need > 1 ? `<span class="ord">${at + 1}</span>` : ""}</button>`;
+      }).join("")}
+      <p class="err" id="handErr"></p>`;
+
+    app.querySelectorAll(".card").forEach(el => {
+      el.onclick = () => {
+        const c = el.dataset.card;
+        const at = picked.indexOf(c);
+        if (at >= 0) picked.splice(at, 1);
+        else if (picked.length < need) picked.push(c);
+        else picked = [...picked.slice(1), c];
+        render(true);
+      };
+    });
+
+    return setDock([
+      { label: "Play it", disabled: picked.length !== need, onClick: async () => {
+          const { ok, data } = await act("submit", picked);
+          if (!ok) document.getElementById("handErr").textContent = data.error || "";
+          else picked = [];
+        } },
+      { label: "New hand · costs 1", ghost: true, onClick: () => { picked = []; act("swap"); } }
+    ]);
+  }
+
+  // --- pick a person
+  if (prompt.type === "pick") {
+    app.innerHTML = `
+      <h1 class="charge">${partsHtml(prompt.parts)}</h1>
+      <p class="meta">Tap a name. Most-picked person drinks.</p>
+      ${state.players.filter(p => p.online).map(p =>
+        `<button class="row" data-id="${p.id}" aria-pressed="${draft === p.id}">${esc(p.name)}${
+          p.id === you.id ? '<span class="sub">yes, you can pick yourself</span>' : ""}</button>`
+      ).join("")}`;
+    app.querySelectorAll(".row").forEach(el => {
+      el.onclick = () => { draft = el.dataset.id; render(true); };
+    });
+    return setDock([{ label: "Lock it in", disabled: !draft,
+      onClick: async () => { const v = draft; draft = null; await act("submit", v); } }]);
+  }
+
+  // --- write your own
+  app.innerHTML = `
+    <h1 class="charge">${partsHtml(prompt.parts)}</h1>
+    <p class="meta">Anonymous until the verdict.</p>
+    <input type="text" id="ansIn" placeholder="Say the wrong thing" maxlength="200" autocomplete="off" />
+    <p class="err" id="ansErr"></p>`;
+  const input = document.getElementById("ansIn");
+  input.value = draft || "";
+  input.oninput = () => { draft = input.value; };
+  setDock([{ label: "Submit", onClick: async () => {
+    const { ok, data } = await act("submit", input.value);
+    if (!ok) document.getElementById("ansErr").textContent = data.error || "";
+    else draft = null;
+  } }]);
+}
+
+function renderVote() {
+  const { you, entries, waitingOn } = state;
+  crumb.textContent = "round " + state.roundNum;
+
+  if (you.voted) {
+    app.innerHTML = `
+      <h1 class="charge">Vote cast.</h1>
+      <p class="note">Waiting on: ${esc(waitingOn.join(", ")) || "nobody"}</p>`;
+    return setDock(you.isHost && waitingOn.length
+      ? [{ label: "Call the vote", onClick: () => act("skip") }] : []);
+  }
+
+  app.innerHTML = `
+    <h1 class="charge">Which one is worst?</h1>
+    <p class="meta">Winning this costs a drink.</p>
+    ${entries.map(e =>
+      `<button class="row" data-id="${e.id}" aria-pressed="${draft === e.id}" ${e.mine ? "disabled" : ""}>${
+        partsHtml(e.parts)}${e.mine ? '<span class="sub">yours</span>' : ""}</button>`
+    ).join("")}`;
+  app.querySelectorAll(".row:not(:disabled)").forEach(el => {
+    el.onclick = () => { draft = el.dataset.id; render(true); };
+  });
+  setDock([{ label: "Cast vote", disabled: !draft,
+    onClick: async () => { const v = draft; draft = null; await act("vote", v); } }]);
+}
+
+function renderResults() {
+  const { results, you } = state;
+  crumb.textContent = "verdict";
+  const names = results.sentenced;
+  const headline = !names.length ? "No verdict."
+    : names.length === 1 ? names[0] + " drinks."
+    : names.join(" and ") + " both drink.";
+
+  app.innerHTML = `
+    <div class="verdict"><h2>${esc(headline)}</h2><p>${esc(results.note)}</p></div>
+    ${results.clashed && results.clashed.length
+      ? `<div class="clash"><b>Same card, same fate.</b> ${esc(results.clashed.join(", "))} played a
+         duplicate and drink for it, on top of everything else.</div>` : ""}
+    ${results.rows.map(r => `
+      <div class="tally ${r.duplicate ? "dupe" : ""}">
+        <span class="count">${r.count}</span>
+        <span class="line">${partsHtml(r.parts)}</span>
+        ${r.authors ? `<span class="who">played by ${esc(r.authors.join(" and "))}</span>` : ""}
+        ${r.by.length ? `<span class="who">voted by ${esc(r.by.join(", "))}</span>` : ""}
+      </div>`).join("")}
+    <p class="note" style="margin-top:22px">Running total</p>
+    ${scoreboard()}`;
+
+  setDock(you.isHost
+    ? [{ label: "Next round", onClick: () => { picked = []; act("next"); } },
+       { label: "Stop", ghost: true, onClick: () => act("endGame") }]
+    : []);
+}
+
+function render(force) {
+  // Someone else submitting shouldn't yank the keyboard away mid-sentence.
+  const el = document.activeElement;
+  if (!force && el && el.id === "ansIn") return;
+
+  if (!state || !state.you) return renderJoin();
+  if (state.phase === "lobby") return renderLobby();
+  if (state.phase === "answer") return renderAnswer();
+  if (state.phase === "vote") return renderVote();
+  if (state.phase === "results") return renderResults();
+}
+
+// -------------------------------------------------------------------- boot
+
+(async function boot() {
+  if (pid) {
+    const { ok } = await post("/api/join", { pid });
+    if (ok) return connect();
+    localStorage.removeItem("tribunal-pid");
+    pid = null;
+  }
+  renderJoin();
+})();
+
+// Phones sleep and kill the stream. Wake it back up.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && pid && (!stream || stream.readyState === 2)) connect();
+});
+</script>
+</body>
+</html>
