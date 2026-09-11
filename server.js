@@ -1,4 +1,4 @@
-// The Tribunal — a local party game server.
+// Unhinged — a local party game server.
 // No dependencies. Run with: node server.js
 //
 // One laptop runs this. Everyone else opens the URL on their phone,
@@ -576,7 +576,7 @@ server.listen(PORT, "0.0.0.0", () => {
     .filter((n) => n && n.family === "IPv4" && !n.internal)
     .map((n) => n.address);
 
-  console.log("\n  The Tribunal is in session.\n");
+  console.log("\n  Unhinged is in session.\n");
   console.log(`  This machine:   http://localhost:${PORT}`);
   for (const ip of lan) console.log(`  Everyone else:  http://${ip}:${PORT}`);
   console.log("\n  Same Wi-Fi. First person to join is the host.\n");

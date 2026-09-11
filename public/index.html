@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0A0A0A" />
-<title>The Tribunal</title>
+<title>Unhinged</title>
 <style>
   /*
     Black and white, with royal purple and teal as tertiary accents only —
@@ -251,7 +251,7 @@
 </head>
 <body>
 
-<div class="brand">THE TRIBUNAL <span id="crumb"></span></div>
+<div class="brand">UNHINGED <span id="crumb"></span></div>
 <main id="app"></main>
 <div class="dock hide" id="dock"><div class="dock-inner" id="dockInner"></div></div>
 
@@ -261,7 +261,7 @@ const dock = document.getElementById("dock");
 const dockInner = document.getElementById("dockInner");
 const crumb = document.getElementById("crumb");
 
-let pid = localStorage.getItem("tribunal-pid");
+let pid = localStorage.getItem("unhinged-pid");
 let state = null;
 let draft = null;       // pending pick / vote selection
 let picked = [];        // cards chosen from hand, in play order
@@ -306,7 +306,7 @@ function renderJoin(msg) {
     const { ok, data } = await post("/api/join", { name: input.value });
     if (!ok) return renderJoin(data.error || "Could not join.");
     pid = data.pid;
-    localStorage.setItem("tribunal-pid", pid);
+    localStorage.setItem("unhinged-pid", pid);
     connect();
   };
   document.getElementById("joinBtn").onclick = go;
@@ -516,7 +516,7 @@ function render(force) {
   if (pid) {
     const { ok } = await post("/api/join", { pid });
     if (ok) return connect();
-    localStorage.removeItem("tribunal-pid");
+    localStorage.removeItem("unhinged-pid");
     pid = null;
   }
   renderJoin();

@@ -9,7 +9,7 @@
 // rejoining under the same name puts you back. For anything you actually care
 // about, run the LAN server.
 
-const store = (globalThis.__tribunalKV ||= new Map());
+const store = (globalThis.__unhingedKV ||= new Map());
 
 const SIX_HOURS = 6 * 60 * 60 * 1000;
 

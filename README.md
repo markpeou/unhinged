@@ -1,4 +1,4 @@
-# The Tribunal
+# Unhinged
 
 A party game played on phones. No dependencies.
 
