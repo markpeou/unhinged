@@ -1,37 +1,27 @@
 # The Tribunal
 
-A local party game. One laptop runs the server, everyone else plays on their
-phone. No dependencies, nothing to install, no internet needed once it's running.
+A party game played on phones. No dependencies.
 
-## Run it
+## Two ways to run it
+
+**Hosted** — `index.html` + `api/kv.js`, deployed to Vercel. Open the URL,
+start a room, share the 4-letter code. Works anywhere, no Wi-Fi requirement.
+State lives in memory in a serverless function, so a cold start can drop a
+room; rejoin with the same name to get your seat back.
+
+**LAN** — `server.js` + `public/index.html`. One laptop, everyone on the same
+Wi-Fi, no internet needed. State lives in a real process, so nothing drops.
+This is the one to use at an actual party.
 
 ```bash
-node server.js
+node server.js          # PORT=8080 to change port
 ```
 
-It prints two URLs. Give people the one with the IP address:
+It prints a LAN URL — `http://192.168.1.42:3000` — for everyone else to open.
+First to join is the host.
 
-```
-This machine:   http://localhost:3000
-Everyone else:  http://192.168.1.42:3000
-```
-
-Same Wi-Fi for everyone. First person to join is the host.
-Different port: `PORT=8080 node server.js`
-
-## What's in this repo
-
-- `server.js` / `prompts.js` / `public/index.html` — the real thing, run this
-  at the party.
-- `preview.html` — a standalone artifact version that syncs through shared
-  browser storage instead of a local server. No Wi-Fi requirement; useful for
-  showing someone the game without setting anything up. Open it, join with a
-  name, share the link.
-- `test-room.html` — a solo test harness. One shared game, four fixed seats,
-  a seat switcher at the top so you can play all four yourself, and an
-  Autofill button so you're not typing four answers every round. Pure local
-  state, no network at all — built for fast iteration on the deck and rules,
-  not for actually playing with friends.
+Note that GitHub Pages can host neither: it serves static files only, so it
+never runs `server.js` or `api/kv.js`.
 
 ## The four kinds of round
 

@@ -297,7 +297,6 @@ function renderJoin(msg) {
   dock.classList.add("hide");
   app.innerHTML = `
     <h1 class="charge">Everyone judges everyone. Someone drinks.</h1>
-    <p class="meta">Pick a name people will recognise when it turns up in a verdict.</p>
     <input type="text" id="nameIn" placeholder="Your name" maxlength="18" autocomplete="off" />
     <button class="go" id="joinBtn" style="width:100%">Take a seat</button>
     <p class="err">${msg ? esc(msg) : ""}</p>`;
@@ -337,9 +336,6 @@ function renderLobby() {
 
   app.innerHTML = `
     <h1 class="charge">${live === 1 ? "Just you so far" : live + " in the room"}</h1>
-    <p class="meta">${you.isHost
-      ? "Names appear here as people join. Start when you can see everyone."
-      : esc(hostName) + " starts it once everyone is in."}</p>
     <div class="roster">
       ${online.map(p => {
         const tags = [];
@@ -350,11 +346,11 @@ function renderLobby() {
           <span class="tag">${tags.join(" · ")}</span>
         </div>`;
       }).join("")}
-      ${live < 2 ? `<div class="empty-seat">Waiting for someone else to join…</div>` : ""}
+      ${live < 2 ? `<div class="empty-seat">Waiting…</div>` : ""}
     </div>`;
 
   setDock(you.isHost
-    ? [{ label: live < 2 ? "Need one more" : "Everyone's in — begin",
+    ? [{ label: live < 2 ? "Need one more" : "Begin",
          disabled: live < 2,
          onClick: () => act("start") }]
     : []);
@@ -381,10 +377,10 @@ function renderAnswer() {
   if (you.submitted) {
     app.innerHTML = `
       <h1 class="charge">${partsHtml(prompt.parts)}</h1>
-      <p class="meta">You played <strong>${esc(state.yourAnswer || "")}</strong>. No takebacks.</p>
-      <p class="note">Still deciding: ${esc(waitingOn.join(", ")) || "nobody"}</p>`;
+      <p class="meta">You played <strong>${esc(state.yourAnswer || "")}</strong>.</p>
+      <p class="note">${esc(waitingOn.join(", ")) || "Everyone's in"}</p>`;
     return setDock(you.isHost && waitingOn.length
-      ? [{ label: "Close it early", onClick: () => act("skip") }] : []);
+      ? [{ label: "Close it", onClick: () => act("skip") }] : []);
   }
 
   // --- a prompt with blanks, played from your hand
@@ -392,8 +388,7 @@ function renderAnswer() {
     const need = prompt.blanks || 1;
     app.innerHTML = `
       <h1 class="charge">${previewHtml(prompt.parts, picked)}</h1>
-      <p class="meta">${need > 1 ? `Play two cards, in order.` : `Play one card.`}
-        Matching somebody else costs you a drink.</p>
+      ${need > 1 ? `<p class="meta">Two cards, in order.</p>` : ""}
       ${you.hand.map(c => {
         const at = picked.indexOf(c);
         return `<button class="card" data-card="${esc(c)}" aria-pressed="${at >= 0}">${esc(c)}${
@@ -418,7 +413,7 @@ function renderAnswer() {
           if (!ok) document.getElementById("handErr").textContent = data.error || "";
           else picked = [];
         } },
-      { label: "New hand · costs 1", ghost: true, onClick: () => { picked = []; act("swap"); } }
+      { label: "New hand · 1", ghost: true, onClick: () => { picked = []; act("swap"); } }
     ]);
   }
 
@@ -426,10 +421,9 @@ function renderAnswer() {
   if (prompt.type === "pick") {
     app.innerHTML = `
       <h1 class="charge">${partsHtml(prompt.parts)}</h1>
-      <p class="meta">Tap a name. Most-picked person drinks.</p>
       ${state.players.filter(p => p.online).map(p =>
         `<button class="row" data-id="${p.id}" aria-pressed="${draft === p.id}">${esc(p.name)}${
-          p.id === you.id ? '<span class="sub">yes, you can pick yourself</span>' : ""}</button>`
+          ""}</button>`
       ).join("")}`;
     app.querySelectorAll(".row").forEach(el => {
       el.onclick = () => { draft = el.dataset.id; render(true); };
@@ -441,7 +435,6 @@ function renderAnswer() {
   // --- write your own
   app.innerHTML = `
     <h1 class="charge">${partsHtml(prompt.parts)}</h1>
-    <p class="meta">Anonymous until the verdict.</p>
     <input type="text" id="ansIn" placeholder="Say the wrong thing" maxlength="200" autocomplete="off" />
     <p class="err" id="ansErr"></p>`;
   const input = document.getElementById("ansIn");
@@ -461,14 +454,13 @@ function renderVote() {
   if (you.voted) {
     app.innerHTML = `
       <h1 class="charge">Vote cast.</h1>
-      <p class="note">Waiting on: ${esc(waitingOn.join(", ")) || "nobody"}</p>`;
+      <p class="note">${esc(waitingOn.join(", ")) || "Everyone's in"}</p>`;
     return setDock(you.isHost && waitingOn.length
-      ? [{ label: "Call the vote", onClick: () => act("skip") }] : []);
+      ? [{ label: "Call it", onClick: () => act("skip") }] : []);
   }
 
   app.innerHTML = `
     <h1 class="charge">Which one is worst?</h1>
-    <p class="meta">Winning this costs a drink.</p>
     ${entries.map(e =>
       `<button class="row" data-id="${e.id}" aria-pressed="${draft === e.id}" ${e.mine ? "disabled" : ""}>${
         partsHtml(e.parts)}${e.mine ? '<span class="sub">yours</span>' : ""}</button>`
@@ -491,16 +483,13 @@ function renderResults() {
   app.innerHTML = `
     <div class="verdict"><h2>${esc(headline)}</h2><p>${esc(results.note)}</p></div>
     ${results.clashed && results.clashed.length
-      ? `<div class="clash"><b>Same card, same fate.</b> ${esc(results.clashed.join(", "))} played a
-         duplicate and drink for it, on top of everything else.</div>` : ""}
+      ? `<div class="clash"><b>Same card.</b> ${esc(results.clashed.join(", "))} drink too.</div>` : ""}
     ${results.rows.map(r => `
       <div class="tally ${r.duplicate ? "dupe" : ""}">
         <span class="count">${r.count}</span>
         <span class="line">${partsHtml(r.parts)}</span>
-        ${r.authors ? `<span class="who">played by ${esc(r.authors.join(" and "))}</span>` : ""}
-        ${r.by.length ? `<span class="who">voted by ${esc(r.by.join(", "))}</span>` : ""}
+        ${r.authors ? `<span class="who">${esc(r.authors.join(" and "))}</span>` : ""}
       </div>`).join("")}
-    <p class="note" style="margin-top:22px">Running total</p>
     ${scoreboard()}`;
 
   setDock(you.isHost
